@@ -37,7 +37,7 @@ public class PlayLevel {
     int count = 0;
     MarioGame game  = new MarioGame();
     while (true) {
-      printResults(game.runGame(new agents.qLearning.Agent(), getLevel("levels/original/lvl-12.txt"), 5, 0, false));
+      printResults(game.runGame(new agents.qLearning.Agent(), getLevel("levels/original/lvl-3.txt"), 15, 0, true));
       count++;
     }
   }

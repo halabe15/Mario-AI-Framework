@@ -11,9 +11,9 @@ import java.util.ArrayList;
 public class QTable{
   static HashMap<String, Float> qValues = new HashMap<>();
 
-  float epsilon = 0.5f; // Explore prob ()
-  float gamma = 0.4f; // Discount factor (important of future rewards, 0 short)
-  float alpha = 0.1f; // Learning rate (1 - deterministic, 0.1 - stochastic)
+  float epsilon = 0.5f;
+  float gamma = 0.4f;
+  float alpha = 0.1f;
 
   public QTable(float epsilon){
     this.epsilon = epsilon;
@@ -26,7 +26,7 @@ public class QTable{
   }
 
   private String getActionsHash(boolean[] action) {
-    return "a_" + action[0] + "_" + action[1] + "_" + action[2] + "_" + action[3] + "_" + action[4];
+    return "moves=" + action[0] + "+" + action[1] + "+" + action[2] + "+" + action[3] + "+" + action[4];
   }
 
   public boolean[] getMaxQValueMove(String state, ArrayList<boolean[]> posibleActions) {
@@ -37,7 +37,7 @@ public class QTable{
     // ArrayList<boolean[]> posibleActions = MarioRandom.marioMoves;
     // log(""+posibleActions.toString());
     for (boolean[] action : posibleActions) {
-      hash += state + "_" + getActionsHash(action);
+      hash += state + "+" + getActionsHash(action);
       if (QTable.qValues.containsKey(hash)) {
         float value = QTable.qValues.get(hash);
         if (value > maxValue) {
@@ -45,7 +45,7 @@ public class QTable{
           maxIndex = index;
         }
       }
-      hash = ""; // reset
+      hash = "";
       index++;
     }
 
@@ -67,7 +67,7 @@ public class QTable{
           maxValue = value;
         }
       }
-      hash = ""; // reset
+      hash = "";
     }
     if (maxValue == 0.0) {
       return 0f;
@@ -76,14 +76,10 @@ public class QTable{
   }
 
   public void updateQValues(String prevState, boolean[] action, float reward, String nextState) {
-    String prevStateHash = "" + prevState + "_" + getActionsHash(action);
-    float oldValue = QTable.qValues.containsKey(prevStateHash) ? QTable.qValues.get(prevStateHash) : 0f;
-
-    // float newValue = oldValue
-        // + this.alpha * (reward + this.gamma * getMaxQValue(nextState, MarioRandom.marioMoves) - oldValue);
-    float newValue = ((1 - this.alpha) * oldValue)
-        + this.alpha * (reward + this.gamma * getMaxQValue(nextState, MarioRandom.marioMoves));
-    QTable.qValues.put(prevStateHash, newValue);
+    String prevStateKey = "" + prevState + "_" + action;
+    float oldValue = QTable.qValues.containsKey(prevStateKey) ? QTable.qValues.get(prevStateKey) : 0f;
+    float newValue = ((1 - this.alpha) * oldValue) + this.alpha * (reward + this.gamma * getMaxQValue(nextState, MarioRandom.marioMoves));
+    QTable.qValues.put(prevStateKey, newValue);
   }
 
   boolean[] getAction(String state, boolean play){
@@ -106,7 +102,7 @@ public class QTable{
   }
 
   void readQTable() {
-    this.readQTable("./qtable.db");
+    this.readQTable("./Q-Table-Results.txt");
   }
 
   @SuppressWarnings("unchecked")
@@ -115,6 +111,7 @@ public class QTable{
       FileInputStream fileIn = new FileInputStream(file);
       ObjectInputStream in = new ObjectInputStream(fileIn);
       QTable.qValues = (HashMap<String, Float>) in.readObject();
+      // qValues.forEach((k,v) -> System.out.println("Key: " + k + ": Value: " + v));
       in.close();
       fileIn.close();
    } catch (IOException i) {
@@ -128,7 +125,7 @@ public class QTable{
   }
 
   void saveQTable() {
-    this.saveQTable("./qtable.db");
+    this.saveQTable("./Q-Table-Results.txt");
   }
 
   void saveQTable(String file) {
@@ -139,14 +136,13 @@ public class QTable{
       out.writeObject(QTable.qValues);
       out.close();
       fileOut.close();
-      System.out.println("Serialized data is saved in " + file);
    } catch (IOException i) {
       i.printStackTrace();
    }
   }
 
   void clearQTable() {
-    this.clearQTable("./qtable.db");
+    this.clearQTable("./Q-Table-Results.txt");
   }
 
   void clearQTable(String file) {
@@ -157,7 +153,6 @@ public class QTable{
       out.writeObject(new HashMap<String, Float>());
       out.close();
       fileOut.close();
-      System.out.println("Cleared QTable data " + file);
    } catch (IOException i) {
       i.printStackTrace();
    }

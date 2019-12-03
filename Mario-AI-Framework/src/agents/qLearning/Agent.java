@@ -18,7 +18,7 @@ public class Agent implements MarioAgent {
   float totalReward = 0;
 
   QTable table;
-  private float epsilonDecay = 0.001f;
+  private float epsilonDecay = 0.0005f;
 
   boolean play = false;
 
@@ -32,12 +32,13 @@ public class Agent implements MarioAgent {
 
   @Override
   public void initialize(MarioForwardModel model, MarioTimer timer) {
-    float base = 0.75f - (this.epsilonDecay * Agent.instanceCount);
-    if(base < 0.2f){
-      table = new QTable(0.2f);
-    } else {
-      table = new QTable(base);
-    }
+    // float base = 0.75f - (this.epsilonDecay * (Agent.instanceCount*0.3f));
+    // if(base < 0.2f){
+    //   table = new QTable(0.2f);
+    // } else {
+    //   table = new QTable(base);
+    // }
+    table = new QTable(0);
     Agent.instanceCount++;
     this.totalReward = 0f;
     this.log("Game init => " + Agent.instanceCount);
@@ -57,30 +58,19 @@ public class Agent implements MarioAgent {
     this.log("*****************************************************" + model.getGameStatus());
   }
 
-  String getStateHash(MarioForwardModel model) {
-    String marioStatus = "jh_" + (model.getMarioCanJumpHigher() ? "1" : "0");
-    String marioCompleteObs = "o";
-    int startPos = 8 - 6;
-    int endPos = 8 + 7;
+  String getMarioStadistics(MarioForwardModel model) {
+    String marioStatus = "jumpHigher=" + (model.getMarioCanJumpHigher() ? "1" : "0");
+    String marioCompleteObs = "observation=";
     int[][] completeObs = model.getMarioCompleteObservation();
-    startPos = (startPos < 0 ? 0 : startPos);
-    endPos = (endPos > completeObs.length - 1 ? completeObs.length - 1 : endPos);
-    int[][] completeObsSlice = Arrays.copyOfRange(completeObs, startPos, endPos);
-    int length = completeObsSlice.length;
-    for(int i = 0; i < length; i++) {
-      int subStartPos = 8 - 5;
-      int subEndPos = 8 + 6;
-      completeObsSlice[i] =  Arrays.copyOfRange(completeObsSlice[i], subStartPos, subEndPos);
-    }
 
     // Flaten
-    for (int[] val1 : completeObsSlice) {
+    for (int[] val1 : completeObs) {
       for (int val2 : val1) {
-        marioCompleteObs += val2;
+          marioCompleteObs += val2;
       }
     }
 
-    return marioStatus + "_" + marioCompleteObs;
+    return marioStatus + "&" + marioCompleteObs;
   }
 
   int zeroCount = 0;
@@ -100,7 +90,7 @@ public class Agent implements MarioAgent {
       f = -10f;
     }
     if (model.getGameStatus() == GameStatus.TIME_OUT) {
-      f = -5f;
+      f = -2f;
     }
     return 0f + v + f;
   }
@@ -124,7 +114,7 @@ public class Agent implements MarioAgent {
 
     // Q-Learning
     boolean[] selectedMove;
-    String state = getStateHash(model);
+    String state = getMarioStadistics(model);
     ArrayList<boolean[]> posibleActions = this.getPosibleMoves(model);
     selectedMove = table.getAction(state, this.play);
     if (this.play) {
@@ -133,15 +123,16 @@ public class Agent implements MarioAgent {
     model.advance(selectedMove);
     float reward = calculateReward(model);
     this.totalReward += reward;
-    String nextStateHash = getStateHash(model);
+    String nextStateHash = getMarioStadistics(model);
     table.updateQValues(state, selectedMove, reward, nextStateHash);
 
-    if (this.totalReward > Agent.maxReward) {
-      Agent.maxReward = this.totalReward;
+    if (reward > Agent.maxReward) {
+      Agent.maxReward = reward;
     }
 
     if (model.getGameStatus() != GameStatus.RUNNING) {
       this.log("Eps => " + this.table.epsilon);
+      this.log("Reward => " + reward);
       this.log("Max Reward => " + Agent.maxReward);
       this.log("Total reward => " + this.totalReward);
       this.table.saveQTable();
